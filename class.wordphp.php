@@ -1,4 +1,36 @@
 <?php
+//============================================================+
+// File name   : barcodes.php
+// Begin       : 2014-03-09
+// Last Update : 2014-08-08
+// Version     : 1.0
+// License     : GNU LGPL (http://www.gnu.org/copyleft/lesser.html)
+// 	----------------------------------------------------------------------------
+//  Copyright (C) 20014 Ricardo Pinto
+// 	
+// 	This program is free software: you can redistribute it and/or modify
+// 	it under the terms of the GNU Lesser General Public License as published by
+// 	the Free Software Foundation, either version 2.1 of the License, or
+// 	(at your option) any later version.
+// 	
+// 	This program is distributed in the hope that it will be useful,
+// 	but WITHOUT ANY WARRANTY; without even the implied warranty of
+// 	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// 	GNU Lesser General Public License for more details.
+// 	
+// 	You should have received a copy of the GNU Lesser General Public License
+// 	along with this program.  If not, see <http://www.gnu.org/licenses/>.
+// 	
+// 	See LICENSE.TXT file for more information.
+//  ----------------------------------------------------------------------------
+//
+// Description : PHP class to read DOCX file into HTML format
+//
+// Author: Ricardo Pinto
+//
+// (c) Copyright:
+//               Ricardo Pinto
+//============================================================+
 
 class WordPHP
 {
