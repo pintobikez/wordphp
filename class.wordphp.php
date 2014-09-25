@@ -1,6 +1,6 @@
 <?php
 //============================================================+
-// File name   : barcodes.php
+// File name   : class.wordphp.php
 // Begin       : 2014-03-09
 // Last Update : 2014-08-08
 // Version     : 1.0
