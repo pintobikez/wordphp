@@ -21,7 +21,6 @@
 // 	You should have received a copy of the GNU Lesser General Public License
 // 	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // 	
-// 	See LICENSE.TXT file for more information.
 //  ----------------------------------------------------------------------------
 //
 // Description : PHP class to read DOCX file into HTML format
@@ -37,20 +36,25 @@ class WordPHP
 	private $debug = false;
 	private $rels_xml;
 	private $doc_xml;
-	private $description='';
-	private $d_spotlight='';
-	private $d_webpage_interest='';
-	private $d_bibliography_documental='';
-	private $d_bibliography_fiction='';
-	private $d_audiovisual='';
-	private $practical_advices='';
 	private $last = 'none';
 	
+	/**
+	 * CONSTRUCTOR
+	 * 
+	 * @param Boolean $debug Debug mode or not
+	 * @return void
+	 */
 	public function __construct($debug_=null){
 		if($debug_ != null)
 			$this->debug = $debug_;
 	}
 	
+	/**
+	 * READS The Document and Relationships into separated XML files
+	 * 
+	 * @param String $filename The filename
+	 * @return void
+	 */
 	private function readZipPart($filename){
 		$zip = new ZipArchive();
 		$_xml = 'word/document.xml';
@@ -78,7 +82,7 @@ class WordPHP
 		$this->doc_xml->saveXML();
 		
 		$this->rels_xml = new DOMDocument();
-		$this->doc_xml->encoding = mb_detect_encoding($xml);
+		$this->rels_xml->encoding = mb_detect_encoding($xml);
 		$this->rels_xml->preserveWhiteSpace = false;
 		$this->rels_xml->formatOutput = true;
 		$this->rels_xml->loadXML($xml_rels);
@@ -94,6 +98,13 @@ class WordPHP
 		}
 	}
 
+	/**
+	 * CHECKS THE FONT FORMATTING OF A GIVEN ELEMENT
+	 * Currently checks and formats: bold, italic, underline, background color and font family
+	 * 
+	 * @param XML $xml The XML node
+	 * @return String HTML formatted code
+	 */
 	private function checkFormating(&$formatting, &$xml)
 	{	
 		$node = trim($xml->readOuterXML());		
@@ -123,6 +134,13 @@ class WordPHP
 		return $f.htmlentities($xml->expand()->textContent)."</span>";
 	}
 	
+	/**
+	 * CHECKS THE ELEMENT FOR UL ELEMENTS
+	 * Currently under development
+	 * 
+	 * @param XML $xml The XML node
+	 * @return String HTML formatted code
+	 */
 	private function getListFormating(&$xml)
 	{	
 		$node = trim($xml->readOuterXML());
@@ -157,10 +175,23 @@ class WordPHP
 		return $ret;
 	}
 	
+	/**
+	 * CHECKS IF THERE IS AN IMAGE PRESENT
+	 * Currently under development
+	 * 
+	 * @param XML $xml The XML node
+	 * @return String HTML formatted code
+	 */
 	private function checkImageFormating(&$xml){
 		
 	}
 	
+	/**
+	 * CHECKS IF ELEMENT IS AN HYPERLINK
+	 *  
+	 * @param XML $xml The XML node
+	 * @return Array With HTML open and closing tag definition
+	 */
 	private function getHyperlink(&$xml)
 	{
 		$ret = array('open'=>'<ul>','close'=>'</ul>');
@@ -201,6 +232,12 @@ class WordPHP
 		return $ret;
 	}
 	
+	/**
+	 * READS THE GIVEN DOCX FILE INTO HTML FORMAT
+	 *  
+	 * @param String $filename The DOCX file name
+	 * @return String With HTML code
+	 */
 	public function readDocument($filename) {
 		
 		$this->readZipPart($filename);
@@ -238,11 +275,11 @@ class WordPHP
 					// look for elements
 					if ($paragraph->nodeType == XMLREADER::ELEMENT && $paragraph->name === 'w:r'){
 						if($list_format == "")
-							$text .= $this->checkFormating($formatting, $paragraph);
+							$text .= $this->checkFormating($paragraph);
 						else
 						{
 							$text .= $list_format['open'];
-							$text .= $this->checkFormating($formatting, $paragraph);
+							$text .= $this->checkFormating($paragraph);
 							$text .= $list_format['close'];
 						}
 						$list_format ="";
@@ -259,7 +296,7 @@ class WordPHP
 					else if ($paragraph->nodeType == XMLREADER::ELEMENT && $paragraph->name === 'w:hyperlink'){
 						$hyperlink = $this->getHyperlink($paragraph);
 						$text .= $hyperlink['open'];
-						$text .= $this->checkFormating($formatting, $paragraph);
+						$text .= $this->checkFormating($paragraph);
 						$text .= $hyperlink['close'];
 						$paragraph->next();
 					}
