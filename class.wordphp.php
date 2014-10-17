@@ -105,7 +105,7 @@ class WordPHP
 	 * @param XML $xml The XML node
 	 * @return String HTML formatted code
 	 */
-	private function checkFormating(&$formatting, &$xml)
+	private function checkFormating(&$xml)
 	{	
 		$node = trim($xml->readOuterXML());		
 		// add <br> tags
