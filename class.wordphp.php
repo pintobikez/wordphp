@@ -37,6 +37,7 @@ class WordPHP
 	private $rels_xml;
 	private $doc_xml;
 	private $last = 'none';
+	private $encondig = 'ISO-8859-1';
 	
 	/**
 	 * CONSTRUCTOR
@@ -44,7 +45,8 @@ class WordPHP
 	 * @param Boolean $debug Debug mode or not
 	 * @return void
 	 */
-	public function __construct($debug_=null){
+	public function __construct($encoding="ISO-8859-1", $debug_=null)
+	{
 		if($debug_ != null)
 			$this->debug = $debug_;
 	}
@@ -55,7 +57,8 @@ class WordPHP
 	 * @param String $filename The filename
 	 * @return void
 	 */
-	private function readZipPart($filename){
+	private function readZipPart($filename)
+	{
 		$zip = new ZipArchive();
 		$_xml = 'word/document.xml';
 		$_xml_rels = 'word/_rels/document.xml.rels';
@@ -88,7 +91,7 @@ class WordPHP
 		$this->rels_xml->loadXML($xml_rels);
 		$this->rels_xml->saveXML();
 		
-		if($this->debug){
+		if($this->debug) {
 			echo "<textarea style='width:100%; height: 200px;'>";
 			echo $this->doc_xml->saveXML();
 			echo "</textarea>";
@@ -114,8 +117,7 @@ class WordPHP
 		$f = "<span style='";
 		$reader = new XMLReader();
 		$reader->XML($node);
-		while ($reader->read())
-		{
+		while ($reader->read()) {
 			if($reader->name == "w:b")
 				$f .= "font-weight: bold,";
 			if($reader->name == "w:i")
@@ -149,16 +151,12 @@ class WordPHP
 		$reader->XML($node);
 		$ret="";
 		$close = "";
-		while ($reader->read())
-		{
-			if($reader->name == "w:numPr" && $reader->nodeType == XMLReader::ELEMENT )
-			{
-						
+		while ($reader->read()){
+			if($reader->name == "w:numPr" && $reader->nodeType == XMLReader::ELEMENT ) {
+				
 			}
-			if($reader->name == "w:numId" && $reader->hasAttributes)
-			{
-				switch($reader->getAttribute("w:val"))
-				{
+			if($reader->name == "w:numId" && $reader->hasAttributes) {
+				switch($reader->getAttribute("w:val")) {
 					case 1:
 						$ret['open'] = "<ol><li>";
 						$ret['close'] = "</li></ol>";
@@ -171,7 +169,6 @@ class WordPHP
 				
 			}
 		}
-	
 		return $ret;
 	}
 	
@@ -182,7 +179,7 @@ class WordPHP
 	 * @param XML $xml The XML node
 	 * @return String HTML formatted code
 	 */
-	private function checkImageFormating(&$xml){
+	private function checkImageFormating(&$xml) {
 		
 	}
 	
@@ -196,25 +193,20 @@ class WordPHP
 	{
 		$ret = array('open'=>'<ul>','close'=>'</ul>');
 		$link ='';
-		if($xml->hasAttributes)
-		{
+		if($xml->hasAttributes) {
 			$attribute = "";
-			while($xml->moveToNextAttribute()) 
-			{
+			while($xml->moveToNextAttribute()) {
 				if($xml->name == "r:id")
 					$attribute = $xml->value;
 			}
 			
-			if($attribute != "")
-			{
+			if($attribute != "") {
 				$reader = new XMLReader();
 				$reader->XML($this->rels_xml->saveXML());
 				
-				while ($reader->read())
-				{
-					if ($reader->nodeType == XMLREADER::ELEMENT && $reader->name=='Relationship')
-					{
-						if($reader->getAttribute("Id") == $attribute){
+				while ($reader->read()) {
+					if ($reader->nodeType == XMLREADER::ELEMENT && $reader->name=='Relationship') {
+						if($reader->getAttribute("Id") == $attribute) {
 							$link = $reader->getAttribute('Target');
 							break;
 						}
@@ -223,8 +215,7 @@ class WordPHP
 			}
 		}
 		
-		if($link != "")
-		{
+		if($link != "") {
 			$ret['open'] = "<a href='".$link."' target='_blank'>";
 			$ret['close'] = "</a>";
 		}
@@ -248,36 +239,36 @@ class WordPHP
 
 		$formatting['header'] = 0;
 		// loop through docx xml dom
-		while ($reader->read()){
+		while ($reader->read()) {
 		// look for new paragraphs
 			$paragraph = new XMLReader;
 			$p = $reader->readOuterXML();
-			if ($reader->nodeType == XMLREADER::ELEMENT && $reader->name === 'w:p'){
+			if ($reader->nodeType == XMLREADER::ELEMENT && $reader->name === 'w:p') {
 				// set up new instance of XMLReader for parsing paragraph independantly				
 				$paragraph->xml($p);
 
 				preg_match('/<w:pStyle w:val="(Heading.*?[1-6])"/',$p,$matches);
-				if(isset($matches[1])){
-				switch($matches[1]){
-				case 'Heading1': $formatting['header'] = 1; break;
-				case 'Heading2': $formatting['header'] = 2; break;
-				case 'Heading3': $formatting['header'] = 3; break;
-				case 'Heading4': $formatting['header'] = 4; break;
-				case 'Heading5': $formatting['header'] = 5; break;
-				case 'Heading6': $formatting['header'] = 6; break;
-				default: $formatting['header'] = 0; break;
-				}}
+				if(isset($matches[1])) {
+					switch($matches[1]){
+						case 'Heading1': $formatting['header'] = 1; break;
+						case 'Heading2': $formatting['header'] = 2; break;
+						case 'Heading3': $formatting['header'] = 3; break;
+						case 'Heading4': $formatting['header'] = 4; break;
+						case 'Heading5': $formatting['header'] = 5; break;
+						case 'Heading6': $formatting['header'] = 6; break;
+						default: $formatting['header'] = 0; break;
+					}
+				}
 				// open h-tag or paragraph
 				$text .= ($formatting['header'] > 0) ? '<h'.$formatting['header'].'>' : '<p>';
 				
 				// loop through paragraph dom
-				while ($paragraph->read()){
+				while ($paragraph->read()) {
 					// look for elements
-					if ($paragraph->nodeType == XMLREADER::ELEMENT && $paragraph->name === 'w:r'){
+					if ($paragraph->nodeType == XMLREADER::ELEMENT && $paragraph->name === 'w:r') {
 						if($list_format == "")
 							$text .= $this->checkFormating($paragraph);
-						else
-						{
+						else {
 							$text .= $list_format['open'];
 							$text .= $this->checkFormating($paragraph);
 							$text .= $list_format['close'];
@@ -285,15 +276,15 @@ class WordPHP
 						$list_format ="";
 						$paragraph->next();
 					}
-					else if($paragraph->nodeType == XMLREADER::ELEMENT && $paragraph->name === 'w:pPr'){ //lists
+					else if($paragraph->nodeType == XMLREADER::ELEMENT && $paragraph->name === 'w:pPr') { //lists
 						$list_format = $this->getListFormating($paragraph);
 						$paragraph->next();
 					}
-					else if($paragraph->nodeType == XMLREADER::ELEMENT && $paragraph->name === 'w:drawing'){ //images
+					else if($paragraph->nodeType == XMLREADER::ELEMENT && $paragraph->name === 'w:drawing') { //images
 						$text .= $this->checkImageFormating($paragraph);
 						$paragraph->next();
 					}
-					else if ($paragraph->nodeType == XMLREADER::ELEMENT && $paragraph->name === 'w:hyperlink'){
+					else if ($paragraph->nodeType == XMLREADER::ELEMENT && $paragraph->name === 'w:hyperlink') {
 						$hyperlink = $this->getHyperlink($paragraph);
 						$text .= $hyperlink['open'];
 						$text .= $this->checkFormating($paragraph);
@@ -305,11 +296,11 @@ class WordPHP
 			}
 		}
 		$reader->close();
-		if($this->debug){
+		if($this->debug) {
 			echo "<div style='width:100%; height: 200px;'>";
-			echo iconv("ISO-8859-1", "UTF-8",$text);
+			echo iconv($this->encoding, "UTF-8",$text);
 			echo "</div>";
 		}
-		return iconv("ISO-8859-1", "UTF-8",$text);
+		return iconv($this->encoding, "UTF-8",$text);
 	}
 }
