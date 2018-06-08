@@ -37,7 +37,7 @@ class WordPHP
 	private $rels_xml;
 	private $doc_xml;
 	private $last = 'none';
-	private $encondig = 'ISO-8859-1';
+	private $encodig = 'ISO-8859-1';
 	
 	/**
 	 * CONSTRUCTOR
@@ -49,6 +49,8 @@ class WordPHP
 	{
 		if($debug_ != null)
 			$this->debug = $debug_;
+		if ($encoding != null)
+			$this->encoding = $encoding;
 	}
 	
 	/**
