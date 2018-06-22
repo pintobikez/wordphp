@@ -6,7 +6,7 @@
 // Version     : 1.0
 // License     : GNU LGPL (http://www.gnu.org/copyleft/lesser.html)
 // 	----------------------------------------------------------------------------
-//  Copyright (C) 20014 Ricardo Pinto
+//  Copyright (C) 2014 Ricardo Pinto
 // 	
 // 	This program is free software: you can redistribute it and/or modify
 // 	it under the terms of the GNU Lesser General Public License as published by
@@ -34,10 +34,13 @@
 class WordPHP
 {
 	private $debug = false;
+	private $file;
 	private $rels_xml;
 	private $doc_xml;
+	private $doc_media = [];
 	private $last = 'none';
-	private $encodig = 'ISO-8859-1';
+	private $encoding = 'ISO-8859-1';
+	private $tmpDir = 'tmp';
 	
 	/**
 	 * CONSTRUCTOR
@@ -45,14 +48,46 @@ class WordPHP
 	 * @param Boolean $debug Debug mode or not
 	 * @return void
 	 */
-	public function __construct($encoding="ISO-8859-1", $debug_=null)
+	public function __construct($debug_=null, $encoding=null)
 	{
-		if($debug_ != null)
+		if($debug_ != null) {
 			$this->debug = $debug_;
-		if ($encoding != null)
+		}
+		if ($encoding != null) {
 			$this->encoding = $encoding;
+		}
+		$this->tmpDir = dirname(__FILE__).'tmp/';
 	}
-	
+
+	/**
+	 * Sets the tmp directory where images will be stored
+	 * 
+	 * @param string $tmp The location 
+	 * @return void
+	 */
+	private function setTmpDir($tmp)
+	{
+		$this->tmpDir = $tmp;
+	}
+
+	/**
+	 * READS The Document and Relationships into separated XML files
+	 * 
+	 * @param var $object The class variable to set as DOMDocument 
+	 * @param var $xml The xml file
+	 * @param string $encoding The encoding to be used
+	 * @return void
+	 */
+	private function setXmlParts(&$object, $xml, $encoding)
+	{
+		$object = new DOMDocument();
+		$object->encoding = $encoding;
+		$object->preserveWhiteSpace = false;
+		$object->formatOutput = true;
+		$object->loadXML($xml);
+		$object->saveXML();
+	}
+
 	/**
 	 * READS The Document and Relationships into separated XML files
 	 * 
@@ -69,29 +104,23 @@ class WordPHP
 			if (($index = $zip->locateName($_xml)) !== false) {
 				$xml = $zip->getFromIndex($index);
 			}
-			$zip->close();
-		} else die('non zip file');
-		
-		if (true === $zip->open($filename)) {
+			//Get the relationships
 			if (($index = $zip->locateName($_xml_rels)) !== false) {
-				$xml_rels = $zip->getFromIndex($index);					
+				$xml_rels = $zip->getFromIndex($index);
 			}
+			// load all images if they exist
+			for ($i=0; $i<$zip->numFiles;$i++) {
+            	$zip_element = $zip->statIndex($i);
+            	 if(preg_match("([^\s]+(\.(?i)(jpg|jpeg|png|gif|bmp))$)",$zip_element['name'])) {
+            	 	$this->doc_media[$zip_element['name']] = $zip_element['name'];
+            	 }
+        	}
 			$zip->close();
 		} else die('non zip file');
-		
-		$this->doc_xml = new DOMDocument();
-		$this->doc_xml->encoding = mb_detect_encoding($xml);
-		$this->doc_xml->preserveWhiteSpace = false;
-		$this->doc_xml->formatOutput = true;
-		$this->doc_xml->loadXML($xml);
-		$this->doc_xml->saveXML();
-		
-		$this->rels_xml = new DOMDocument();
-		$this->rels_xml->encoding = mb_detect_encoding($xml);
-		$this->rels_xml->preserveWhiteSpace = false;
-		$this->rels_xml->formatOutput = true;
-		$this->rels_xml->loadXML($xml_rels);
-		$this->rels_xml->saveXML();
+
+		$enc = mb_detect_encoding($xml);
+		$this->setXmlParts($this->doc_xml, $xml, $enc);
+		$this->setXmlParts($this->rels_xml, $xml_rels, $enc);
 		
 		if($this->debug) {
 			echo "<textarea style='width:100%; height: 200px;'>";
@@ -119,23 +148,35 @@ class WordPHP
 		$f = "<span style='";
 		$reader = new XMLReader();
 		$reader->XML($node);
+		$img = null;
+
 		while ($reader->read()) {
-			if($reader->name == "w:b")
+			if($reader->name == "w:b") {
 				$f .= "font-weight: bold,";
-			if($reader->name == "w:i")
+			}
+			if($reader->name == "w:i") {
 				$f .= "text-decoration: underline,";
-			if($reader->name == "w:color")
+			}
+			if($reader->name == "w:color") {
 				$f .="color: #".$reader->getAttribute("w:val").",";
-			if($reader->name == "w:rFont")
+			}
+			if($reader->name == "w:rFont") {
 				$f .="font-family: #".$reader->getAttribute("w:ascii").",";
-			if($reader->name == "w:shd" && $reader->getAttribute("w:val") != "clear" && $reader->getAttribute("w:fill") != "000000")
+			}
+			if($reader->name == "w:shd" && $reader->getAttribute("w:val") != "clear" && $reader->getAttribute("w:fill") != "000000") {
 				$f .="background-color: #".$reader->getAttribute("w:fill").",";
+			}
+			if($reader->name == 'w:drawing' && !empty($reader->readInnerXml())) {
+				$r = $this->checkImageFormating($reader);
+				$img = $r !== "" ? "<image src='".$r."' />" : null;
+			}
 		}
 		
 		$f = rtrim($f, ',');
 		$f .= "'>";
-		
-		return $f.htmlentities($xml->expand()->textContent)."</span>";
+		$t = ($img !== null ? $img : htmlentities($xml->expand()->textContent));
+
+		return $f.$t."</span>";
 	}
 	
 	/**
@@ -179,10 +220,53 @@ class WordPHP
 	 * Currently under development
 	 * 
 	 * @param XML $xml The XML node
-	 * @return String HTML formatted code
+	 * @return String The location of the image
 	 */
-	private function checkImageFormating(&$xml) {
-		
+	private function checkImageFormating(&$xml)
+	{
+		$content = trim($xml->readInnerXml());
+
+		if (!empty($content)) {
+
+			$relId;
+			$notfound = true;
+			$reader = new XMLReader();
+			$reader->XML($content);
+			
+			while ($reader->read() && $notfound) {
+				if ($reader->name == "a:blip") {
+					$relId = $reader->getAttribute("r:embed");
+					$notfound = false;
+				}
+			}
+
+			// image id found, get the image location
+			if (!$notfound && $relId) {
+				$reader = new XMLReader();
+				$reader->XML($this->rels_xml->saveXML());
+				
+				while ($reader->read()) {
+					if ($reader->nodeType == XMLREADER::ELEMENT && $reader->name=='Relationship') {
+						if($reader->getAttribute("Id") == $relId) {
+							$link = "word/".$reader->getAttribute('Target');
+							break;
+						}
+					}
+				}
+
+    			$zip = new ZipArchive();
+    			if (true === $zip->open($this->file)) {
+        			$im = imagecreatefromstring($zip->getFromName($link));
+        			$fname = $this->tmpDir.$relId.'.png';
+    				imagepng($im, $fname);
+
+    				return 'tmp/'.$relId.'.png';
+    			}
+    			$zip->close();
+			}
+		}
+
+		return "";
 	}
 	
 	/**
@@ -231,8 +315,9 @@ class WordPHP
 	 * @param String $filename The DOCX file name
 	 * @return String With HTML code
 	 */
-	public function readDocument($filename) {
-		
+	public function readDocument($filename)
+	{
+		$this->file = $filename;
 		$this->readZipPart($filename);
 		$reader = new XMLReader();
 		$reader->XML($this->doc_xml->saveXML());
@@ -300,9 +385,9 @@ class WordPHP
 		$reader->close();
 		if($this->debug) {
 			echo "<div style='width:100%; height: 200px;'>";
-			echo iconv($this->encoding, "UTF-8",$text);
+			echo mb_convert_encoding($text, $this->encoding);
 			echo "</div>";
 		}
-		return iconv($this->encoding, "UTF-8",$text);
+		return mb_convert_encoding($text, $this->encoding);
 	}
 }
