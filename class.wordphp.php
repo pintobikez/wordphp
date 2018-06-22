@@ -2,7 +2,7 @@
 //============================================================+
 // File name   : class.wordphp.php
 // Begin       : 2014-03-09
-// Last Update : 2014-08-08
+// Last Update : 2018-06-22
 // Version     : 1.0
 // License     : GNU LGPL (http://www.gnu.org/copyleft/lesser.html)
 // 	----------------------------------------------------------------------------
