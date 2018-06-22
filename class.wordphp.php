@@ -3,7 +3,7 @@
 // File name   : class.wordphp.php
 // Begin       : 2014-03-09
 // Last Update : 2018-06-22
-// Version     : 1.0
+// Version     : 1.1
 // License     : GNU LGPL (http://www.gnu.org/copyleft/lesser.html)
 // 	----------------------------------------------------------------------------
 //  Copyright (C) 2014 Ricardo Pinto
@@ -56,7 +56,7 @@ class WordPHP
 		if ($encoding != null) {
 			$this->encoding = $encoding;
 		}
-		$this->tmpDir = dirname(__FILE__).'tmp/';
+		$this->tmpDir = dirname(__FILE__);
 	}
 
 	/**
@@ -168,7 +168,7 @@ class WordPHP
 			}
 			if($reader->name == 'w:drawing' && !empty($reader->readInnerXml())) {
 				$r = $this->checkImageFormating($reader);
-				$img = $r !== "" ? "<image src='".$r."' />" : null;
+				$img = $r !== null ? "<image src='".$r."' />" : null;
 			}
 		}
 		
@@ -255,20 +255,56 @@ class WordPHP
 				}
 
     			$zip = new ZipArchive();
+    			$im = null;
     			if (true === $zip->open($this->file)) {
-        			$im = imagecreatefromstring($zip->getFromName($link));
-        			$fname = $this->tmpDir.$relId.'.png';
-    				imagepng($im, $fname);
-
-    				return 'tmp/'.$relId.'.png';
+        			$im = $this->createImage($zip->getFromName($link), $relId, $link);
     			}
     			$zip->close();
+    			return $im;
 			}
 		}
 
-		return "";
+		return null;
 	}
-	
+
+	/**
+	 * Creates an image in the filesystem
+	 *  
+	 * @param objetc $image The image object
+	 * @param string $relId The image relationship Id
+	 * @param string $name The image name
+	 * @return Array With HTML open and closing tag definition
+	 */
+	private function createImage($image, $relId, $name)
+	{
+		$arr = explode('.', $name);
+		$l = count($arr);
+		$ext = strtolower($arr[$l-1]);
+
+		$im = imagecreatefromstring($image);
+		$fname = $this->tmpDir.'tmp/'.$relId.$ext;
+
+		switch ($ext) {
+			case 'png':
+				imagepng($im, $fname);
+				break;
+			case 'bmp':
+				imagebmp($im, $fname);
+				break;
+			case 'gif':
+				imagegif($im, $fname);
+				break;
+			case 'jpeg':
+			case 'jpg':
+				imagejpeg($im, $fname);
+				break;
+			default:
+				return null;
+		}
+
+		return 'tmp/'.$relId.'.png';
+	}
+
 	/**
 	 * CHECKS IF ELEMENT IS AN HYPERLINK
 	 *  
