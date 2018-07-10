@@ -1,17 +1,27 @@
-This is a class that intents to read a DOCX file and output it to HTML format.
+# This is a class that intents to read a DOCX file and output it to HTML format.
 
-USAGE
+# USAGE
 
-//debug mode
+## debug mode
+```
 $rt = new WordPHP(true);
+```
 
-//without debug
+## without debug
+```
 $rt = new WordPHP(false); or $rt = new WordPHP();
+```
 
-//Read docx file and returns the html code
+## Set output encoding
+```
+$rt = new WordPHP(false, OUTPUT_ENCODING);
+```
+
+## Read docx file and returns the html code
+```
 $text = $rt->readDocument(FILENAME);
+```
 
-
-NOTE:
+# NOTE:
 To load images, please create a tmp folder where images can be extracted and saved from the document.
 Don't forget to change the permissions in that folder so that the user that runs this class can right the images in it.
