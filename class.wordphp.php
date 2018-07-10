@@ -282,7 +282,7 @@ class WordPHP
 		$ext = strtolower($arr[$l-1]);
 
 		$im = imagecreatefromstring($image);
-		$fname = $this->tmpDir.'tmp/'.$relId.$ext;
+		$fname = $this->tmpDir.'/tmp/'.$relId.'.'.$ext;
 
 		switch ($ext) {
 			case 'png':
