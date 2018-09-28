@@ -141,9 +141,10 @@ class WordPHP
 	 */
 	private function checkFormating(&$xml)
 	{	
-		$node = trim($xml->readOuterXML());		
+		$node = trim($xml->readOuterXML());
+		$t = '';
 		// add <br> tags
-		if (strstr($node,'<w:br ')) $text .= '<br>';					 
+		if (strstr($node,'<w:br ')) $t = '<br>';					 
 		// look for formatting tags
 		$f = "<span style='";
 		$reader = new XMLReader();
@@ -174,7 +175,7 @@ class WordPHP
 		
 		$f = rtrim($f, ',');
 		$f .= "'>";
-		$t = ($img !== null ? $img : htmlentities($xml->expand()->textContent));
+		$t .= ($img !== null ? $img : htmlentities($xml->expand()->textContent));
 
 		return $f.$t."</span>";
 	}
@@ -302,7 +303,7 @@ class WordPHP
 				return null;
 		}
 
-		return 'tmp/'.$relId.'.png';
+		return $fname;
 	}
 
 	/**
@@ -344,7 +345,115 @@ class WordPHP
 		
 		return $ret;
 	}
-	
+
+
+	/**
+	 * PROCESS TABLE CONTENT
+	 *  
+	 * @param XML $xml The XML node
+	 * @return THe HTML code of the table
+	 */
+	private function checkTableFormating(&$xml)
+	{
+		$table = "<table><tbody>";
+
+		while ($xml->read()) {
+			if ($xml->nodeType == XMLREADER::ELEMENT && $xml->name === 'w:tr') { //table row
+				$tc = $ts = "";
+
+
+				$tr = new XMLReader;
+				$tr->xml(trim($xml->readOuterXML()));
+
+				while ($tr->read()) {
+					if ($tr->nodeType == XMLREADER::ELEMENT && $tr->name === 'w:tcPr') { //table element properties
+						$ts = $this->processTableStyle(trim($tr->readOuterXML()));
+					}
+					if ($tr->nodeType == XMLREADER::ELEMENT && $tr->name === 'w:tc') { //table column
+						$tc .= $this->processTableRow(trim($tr->readOuterXML()));
+					}
+				}
+				$table .= '<tr style="'.$ts.'">'.$tc.'</tr>';
+			}
+		}
+
+		$table .= "</tbody></table>";
+		return $table;
+	}
+
+	/**
+	 * PROCESS THE TABLE ROW STYLE
+	 *  
+	 * @param string $content The XML node content
+	 * @return THe HTML code of the table
+	 */
+	private function processTableStyle($content)
+	{
+		/*border-collapse:collapse; 
+		border-bottom:4px dashed #0000FF; 
+		border-top:6px double #FF0000; 
+		border-left:5px solid #00FF00; 
+		border-right:5px solid #666666;*/
+
+		$tc = new XMLReader;
+		$tc->xml($content);
+		$style = "border-collapse:collapse;";
+
+		while ($tc->read()) {
+			if ($tc->name === "w:tcBorders") {
+				$tc2 = new SimpleXMLElement($tc->readOuterXML());
+
+				foreach ($tc2->children('w',true) as $ch) {
+					if (in_array($ch->getName(), ['left','top','botom','right']) ) {
+						$line = $this->convertLine($ch['val']);
+						$style .= " border-".$ch->getName().":".$ch['sz']."px $line #".$ch['color'].";";
+					}
+				}
+				
+				$tc->next();
+			}
+		}
+		return $style;
+	}
+
+	private function convertLine($in)
+	{
+		if (in_array($in, ['dotted']))
+			return "dashed";
+
+		if (in_array($in, ['dotDash','dotdotDash','dotted','dashDotStroked','dashed','dashSmallGap']))
+			return "dashed";
+		
+		if (in_array($in, ['double','triple','threeDEmboss','threeDEngrave','thick']))
+			return "double";
+
+		if (in_array($in, ['nil','none']))
+			return "none";
+
+		return "solid";
+	}
+
+	/**
+	 * PROCESS THE TABLE ROW
+	 *  
+	 * @param string $content The XML node content
+	 * @return THe HTML code of the table
+	 */
+	private function processTableRow($content)
+	{
+		$tc = new XMLReader;
+		$tc->xml($content);
+		$ct = "";
+
+		while ($tc->read()) {
+			if ($tc->name === "w:r") {
+				$ct .= "<td>".$this->checkFormating($tc)."</td>";
+				$tc->next();
+			}
+		}
+		return $ct;
+	}
+
 	/**
 	 * READS THE GIVEN DOCX FILE INTO HTML FORMAT
 	 *  
@@ -366,6 +475,7 @@ class WordPHP
 		// look for new paragraphs
 			$paragraph = new XMLReader;
 			$p = $reader->readOuterXML();
+
 			if ($reader->nodeType == XMLREADER::ELEMENT && $reader->name === 'w:p') {
 				// set up new instance of XMLReader for parsing paragraph independantly				
 				$paragraph->xml($p);
@@ -416,6 +526,11 @@ class WordPHP
 					}
 				}
 				$text .= ($formatting['header'] > 0) ? '</h'.$formatting['header'].'>' : '</p>';
+			}
+			else if ($reader->nodeType == XMLREADER::ELEMENT && $reader->name === 'w:tbl') { //tables
+				$paragraph->xml($p);
+				$text .= $this->checkTableFormating($paragraph);
+				$reader->next();
 			}
 		}
 		$reader->close();
